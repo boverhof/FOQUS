@@ -295,7 +295,7 @@ class TurbineLiteDB:
         self._topic_arn = FOQUSAWSConfig.get_instance().get_update_topic_arn()
         self._topic_msg_arn = FOQUSAWSConfig.get_instance().get_message_topic_arn()
         self._user_name = 'unknown'
-        self.consumer_id = str(uuid.uuid4())
+        self._consumer_id = str(uuid.uuid4())
 
     def _sns_notification(self, obj):
         _log.debug('_sns_notification obj: %s' %obj)
@@ -325,7 +325,7 @@ class TurbineLiteDB:
     def add_new_application(self, applicationName, rc=0):
         _log.info("%s.add_new_application", self.__class__.__name__)
     def add_message(self, msg, jobid="", **kw):
-        d = dict(job=jobid, message=msg, consumer=self.consumer_id, instanceid=_instanceid, resource="job")
+        d = dict(job=jobid, message=msg, consumer=self._consumer_id, instanceid=_instanceid, resource="job")
         d.update(kw)
         obj = json.dumps(d)
         _log.debug("%s.add_message: %s", self.__class__.__name__, obj)
@@ -334,18 +334,18 @@ class TurbineLiteDB:
     def consumer_keepalive(self, rc=0):
         _log.info("%s.consumer_keepalive", self.__class__.__name__)
         self._sns_notification(dict(resource='consumer', event='running', rc=rc,
-            consumer=self.consumer_id, instanceid=_instanceid))
+            consumer=self._consumer_id, instanceid=_instanceid))
 
     def consumer_status(self):
         _log.info("%s.consumer_status", self.__class__.__name__)
         #assert status in ['up','down','terminate'], ''
-        #self._sns_notification(dict(resource='consumer', event=status, rc=rc, consumer=self.consumer_id))
+        #self._sns_notification(dict(resource='consumer', event=status, rc=rc, consumer=self._consumer_id))
         return 'up'
     def consumer_id(self, pid, rc=0):
-        _log.info("%s.consumer_id", self.__class__.__name__)
+        _log.info("%s.consumer_id %s", self.__class__.__name__, self._consumer_id)
     def consumer_register(self, rc=0):
         _log.info("%s.consumer_register", self.__class__.__name__)
-        d = dict(resource='consumer', instanceid=_instanceid, event='running', rc=rc, consumer=self.consumer_id)
+        d = dict(resource='consumer', instanceid=_instanceid, event='running', rc=rc, consumer=self._consumer_id)
         self._sns_notification(d)
         _log.info("%s.consumer_register: %s", self.__class__.__name__, str(d))
     #def get_job_id(self, simName=None, sessionID=None, consumerID=None, state='submit', rc=0):
@@ -365,7 +365,7 @@ class TurbineLiteDB:
         _log.info("%s.job_change_status %s", self.__class__.__name__, job_d)
         d = dict(resource='job', event='status',
             rc=rc, status=status, jobid=job_d['Id'], instanceid=_instanceid,
-            consumer=self.consumer_id,
+            consumer=self._consumer_id,
             sessionid=job_d.get('sessionid','unknown'))
         if message: d['message'] = message
         self._sns_notification(d)
