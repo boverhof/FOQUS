@@ -1,3 +1,18 @@
+###############################################################################
+# FOQUS Copyright (c) 2012 - 2021, by the software owners: Oak Ridge Institute
+# for Science and Education (ORISE), TRIAD National Security, LLC., Lawrence
+# Livermore National Security, LLC., The Regents of the University of
+# California, through Lawrence Berkeley National Laboratory, Battelle Memorial
+# Institute, Pacific Northwest Division through Pacific Northwest National
+# Laboratory, Carnegie Mellon University, West Virginia University, Boston
+# University, the Trustees of Princeton University, The University of Texas at
+# Austin, URS Energy & Construction, Inc., et al.  All rights reserved.
+#
+# Please see the file LICENSE.md for full copyright and license information,
+# respectively. This file is also available online at the URL
+# "https://github.com/CCSI-Toolset/FOQUS".
+#
+###############################################################################
 """session.py
 
 * Some functions to setup FOQUS environment
@@ -5,7 +20,6 @@
 * Class for genral FOQUS settings
 
 John Eslick, Carnegie Mellon University, 2014
-See LICENSE.md for license and copyright details.
 """
 import json
 import os
@@ -318,6 +332,8 @@ class session:
         self.uqSimList = [] # list of UQ simulation ensembles
         self.uqFilterResultsList = [] # list of UQ filter results
         self.sdoeSimList = [] # list of SDOE simulation ensembles
+        self.odoeCandList = []  # list of ODOE candidate sets
+        self.odoeEvalList = []  # list of ODOE evaluation sets
         self.sdoeFilterResultsList = [] # list of SDOE filter results
         self.ID = time.strftime('Session_%y%m%d%H%M%S') #session id
         self.archiveFolder = \
@@ -352,20 +368,17 @@ class session:
             idString = '#FOQUS_SURROGATE_PLUGIN',
             pathList = [
                 os.path.join(os.getcwd(), 'user_plugins'),
-                os.path.dirname(surrogate.__file__)],
-            charLimit = 150)
+                os.path.dirname(surrogate.__file__)])
         self.optSolvers = pluginSearch.plugins(
             idString = '#FOQUS_OPT_PLUGIN',
             pathList = [
                 os.path.join(os.getcwd(), 'user_plugins'),
-                os.path.dirname(problem.__file__)],
-            charLimit = 150)
+                os.path.dirname(problem.__file__)])
         self.pymodels = pluginSearch.plugins(
             idString = '#FOQUS_PYMODEL_PLUGIN',
             pathList = [
                 os.path.join(os.getcwd(), 'user_plugins'),
-                os.path.dirname(pymodel.__file__)],
-            charLimit = 150)
+                os.path.dirname(pymodel.__file__)])
         try:
             self.flowsheet.pymodels = self.pymodels
         except:
@@ -481,6 +494,16 @@ class session:
         sd["sdoeFilterResultsList"] = []
         for filter in self.sdoeFilterResultsList:
             sd['sdoeFilterResultsList'].append(filter.saveDict())
+        # Save ODOE cand list
+        sd["odoeCandList"] = []
+        for sim in self.odoeCandList:
+            sd['odoeCandList'].append(sim.saveDict())
+
+        # Save ODOE eval list
+        sd["odoeEvalList"] = []
+        for sim in self.odoeEvalList:
+            sd['odoeEvalList'].append(sim.saveDict())
+
         if filename:
             #write two copies of the file one is backup you can keep
             #forever, one is the specified file name with most recent
@@ -603,6 +626,27 @@ class session:
                 filterResults = Results()
                 filterResults.loadDict(filterDict)
                 self.sdoeFilterResultsList.append(filterResults)
+        # Load ODOE Stuff
+        self.odoeCandList = []
+        if 'odoeCandList' in sd:
+            for simDict in sd['odoeCandList']:
+                model = Model()
+                model.loadDict(simDict['model'])
+                sim = SampleData(model)
+                sim.setSession(self)
+                sim.loadDict(simDict)
+                self.odoeCandList.append(sim)
+
+        self.odoeEvalList = []
+        if 'odoeEvalList' in sd:
+            for simDict in sd['odoeEvalList']:
+                model = Model()
+                model.loadDict(simDict['model'])
+                sim = SampleData(model)
+                sim.setSession(self)
+                sim.loadDict(simDict)
+                self.odoeEvalList.append(sim)
+
         self.currentFile = None
 
     def removeArchive(self):
