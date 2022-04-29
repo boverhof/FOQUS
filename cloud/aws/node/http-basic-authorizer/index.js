@@ -12,7 +12,8 @@
 'use AWS.DynamoDB'
 'use uuid'
 const AWS = require('aws-sdk');
-const tableName = "FOQUS_Resources";
+//const tableName = "FOQUS_Resources";
+const table_name = process.env.FOQUS_DYNAMO_TABLE_NAME;
 exports.handler = function(event, context, callback) {
     console.log('Received event:', JSON.stringify(event, null, 2));
     var headers = event.headers;
@@ -56,7 +57,7 @@ exports.handler = function(event, context, callback) {
        else console.log(data);
     });
     */
-    dynamodb.get({ TableName:tableName,
+    dynamodb.get({ TableName:table_name,
        Key:{"Id": user.name, "Type":"User" }
       },
       function(err,data) {

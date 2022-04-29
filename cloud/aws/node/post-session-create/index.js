@@ -8,6 +8,7 @@
  */
 'use strict';
 'use uuid'
+const AWS = require('aws-sdk');
 const uuidv4 = require('uuid/v4');
 exports.handler = function(event, context, callback) {
   const done = (err, res) => callback(null, {
