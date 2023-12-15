@@ -6,21 +6,21 @@ from botocore.exceptions import ClientError
 
 CONSUMER_ID = "00000000-0000-0000-0000-000000000000"
 
-
+#
+# Receives messages from a Job Queue for SDOE usf.compute_min_dist executions
+#  publishes job status updates to an SNS Topic as it processes the message
+#
 def lambda_handler(event, context):
-    # SLM Security Group us-east-1 sg-097636e72d37d985f
-    # ec2 = boto3.client('ec2', region_name='us-east-1')
-    print("EVENT: %s" % (json.dumps(event)))
-    s3 = boto3.client("s3")
+    #print("EVENT: %s" % (json.dumps(event)))
     sns = boto3.client("sns")
     update_topic_arn = os.environ["FOQUS_Update_Topic_Arn"]
-    print("TOPIC_ARN: %s" % (update_topic_arn))
-
+    print("SDOE compute_min_dist: TOPIC_ARN=%s" % (update_topic_arn))
     num_executions = 0
     assert "Records" in event, "Format Error: No Records in SNS Message"
-
+    print("Number Records: %d" % (event["Records"].length))
     for record in event["Records"]:
         msg_id = record["messageId"]
+        print("Start Record=%d, messageId=%s" % (num_executions,msg_id))
         body = record["body"]
         job = json.loads(body)
         if job["resource"] != "job":
@@ -121,7 +121,6 @@ def lambda_handler(event, context):
             TopicArn=update_topic_arn,
         )
         ret = sns.publish(**params)
-
         msg_attrs["event"]["StringValue"] = "job.success"
         job2["event"] = "status"
         job2["status"] = "success"
