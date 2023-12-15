@@ -577,9 +577,9 @@ var process_consumer_event = function(ts, message, callback) {
       }
     });
 }
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+// function sleep(ms) {
+//   return new Promise(resolve => setTimeout(resolve, ms));
+// }
 /*
  * exports.handler
  * Listens to SNS Update Topic, event parameter specifies type of
