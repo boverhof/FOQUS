@@ -38,9 +38,9 @@ var id_list = [];
 //   All jobs have been processed from the S3 create session
 //   This SNS msg will move jobs in state=stop to state=submit, logs
 //   the event, increments metrics.
-var finalize_session_event_start = function(topic_arn, session_id, user_name, callback) {
+function finalize_session_event_start(topic_arn, session_id, user_name, callback) {
     log(`"finalize_session_event_start(${session_id})"`);
-    var params = {
+    let params = {
         Message: `session.start.${session_id}`,
         MessageAttributes: {
           'event': {
@@ -58,7 +58,7 @@ var finalize_session_event_start = function(topic_arn, session_id, user_name, ca
         },
         TopicArn: topic_arn
     };
-    var promise = sns.publish(params, function(err, data) {
+    let promise = sns.publish(params, function(err, data) {
         if (err) {
           log(`Failure: SNS Publish Session Start(${session_id})`);
           log(err, err.stack); // an error occurred
@@ -81,17 +81,15 @@ var finalize_session_event_start = function(topic_arn, session_id, user_name, ca
     return promise;
 };
 
-var process_s3_create_job_batch = function(user_name, topicArn, session_id, s3_bucket_name, s3_key) {
+function process_s3_create_job_batch(user_name, topic_arn, session_id, s3_bucket_name, s3_key) {
   if (s3_key.endsWith('.json') == false) {
     log(`SKIP NOT JSON: key=${s3_key}`);
     return;
   }
-  var params_delete = {Bucket: s3_bucket_name, Delete:{Objects:[]}};
-  var params_getobj = {
+  let params_getobj = {
     Bucket: s3_bucket_name,
     Key: s3_key,
   };
-  params_delete.Delete.Objects.push({Key:s3_key});
   log("S3 getObject PARAMS: %s", JSON.stringify(params_getobj));
   // Grab All S3 Files, load them into JSON parsed OBJECTS
   // send them iterativly to SNS and call done with the number sent
@@ -103,14 +101,14 @@ var process_s3_create_job_batch = function(user_name, topicArn, session_id, s3_b
       var promise_sns_list = [];
       for (var index=0 ; index < values.length; index++ ) {
           let obj = values[index];
-          log("SESSION(" + session_id + "," + index + "):  Notify Starting job=" + obj.Id);
+          log(`SESSION(${session_id}, ${index}):  Notify Starting job=${obj.Id}`);
           id_list.push(obj['Id']);
           obj.resource = 'job';
           obj.status = 'submit';
           obj.jobid = obj.Id;
           obj.sessionid = session_id;
           obj.event = 'status';
-          var payload = JSON.stringify(obj);
+          let payload = JSON.stringify(obj);
           let params_sns = {
               Message: payload,
               MessageAttributes: {
@@ -135,37 +133,30 @@ var process_s3_create_job_batch = function(user_name, topicArn, session_id, s3_b
                   StringValue: obj.Application || 'foqus'
                 }
               },
-              TopicArn: topicArn
+              TopicArn: topic_arn
           };
-          var promise_sns = sns.publish(params_sns, function(err, data) {
+          let promise_sns = sns.publish(params_sns, function(err, data) {
               if (err) {
-                //log("ERROR: Failed to SNS Publish Job Start");
-                log("SNS Publish error session=" + params_sns.MessageAttributes.session.StringValue + ",job="+ params_sns.MessageAttributes.job.StringValue);
+                log(`SNS Publish error session=${params_sns.MessageAttributes.session.StringValue}, job=${params_sns.MessageAttributes.job.StringValue}`);
                 log(err, err.stack); // an error occurred
-                throw new Error(`SNS Publish error session=${params_sns.MessageAttributes.session.StringValue} job=${params_sns.MessageAttributes.job.StringValue}`);
+                throw new Error(`SNS Publish error session=${params_sns.MessageAttributes.session.StringValue}, job=${params_sns.MessageAttributes.job.StringValue}`);
               } else {
-                log("SNS Publish session=" + params_sns.MessageAttributes.session.StringValue + ",job="+ params_sns.MessageAttributes.job.StringValue);
+                log(`SNS Publish session=${params_sns.MessageAttributes.session.StringValue}, job=${params_sns.MessageAttributes.job.StringValue}`);
               }
           }).promise();
           promise_sns_list.push(promise_sns);
-          //log("SESSION(" + session_id + "," + index + "):  promise_sns_list=" + promise_sns_list);
       }
       log(`SNS Promise List(${s3_key}), Len=${promise_sns_list.length}`);
       return Promise.all(promise_sns_list)
         .then(function() {
-          log("Delete: " + JSON.stringify(params_delete));
-          if (params_delete.Delete.Objects.length == 0) {
-              log("WARNING: No S3 Create Objects to be Deleted");
-              //assert.strictEqual(id_list.length, 0);
-              //done(null, id_list);
-              return;
-          }
+          log(`Delete: bucket=${s3_bucket_name} key=${s3_key}`);
+          let params_delete = {Bucket: s3_bucket_name, Delete:{Objects:[{Key:s3_key}]}};
           let promise = s3.deleteObjects(params_delete, function(err, data) {
               if (err) {
                   log(`handleDelete(${params_delete.Delete.Objects.length}), ERROR: ${err}`);
                   log(`handleDelete ERROR Stack: ${err.stack}`);
               } else {
-                  log(`handleDelete: DELETED ${params_delete.Delete.Objects.length}`);
+                  log(`handleDelete: DELETED ${JSON.stringify(params_delete)}`);
               }
           }).promise();
           return promise;
@@ -191,26 +182,22 @@ exports.handler = function(event, context, callback) {
   }
   if (event.requestContext.authorizer == null) {
     log("API Gateway Testing");
-    var content = JSON.stringify([]);
-    callback(null, {statusCode:'200', body: content,
-      headers: {'Access-Control-Allow-Origin': '*','Content-Type': 'application/json'}
-    });
+    done(null, []);
     return;
   }
 
   const user_name = event.requestContext.authorizer.principalId;
   if (event.httpMethod == "POST") {
     log("PATH: " + event.path);
-    //var body = JSON.parse(event);
     const session_id = event.path.split('/')[2];
     log("SESSIONID: " + session_id);
     log("SESSION BUCKET_NAME: " + s3_bucket_name);
-    var params = {
+    let params = {
       Bucket: s3_bucket_name,
       Prefix: user_name + '/session/create/' + session_id + '/',
       StartAfter: user_name + '/session/create/' + session_id + '/'
     };
-    var request_list = s3.listObjectsV2(params, function(err, data) {
+    let request_list = s3.listObjectsV2(params, function(err, data) {
         if (err) {
           log(err, err.stack); // an error occurred
           done(new Error(`"${err.stack}"`));
@@ -220,7 +207,7 @@ exports.handler = function(event, context, callback) {
     request_list.on('success', function(response_list) {
         log("S3 listObjects Contents: length="+ response_list.data.Contents.length);
         log("Create Topic: Name=" + foqus_update_topic);
-        var request_topic = sns.createTopic({
+        let request_topic = sns.createTopic({
             Name: foqus_update_topic,
           }, function(err, data) {
                 if (err) {
@@ -235,35 +222,33 @@ exports.handler = function(event, context, callback) {
         // containing Array of job requests
         //
         request_topic.on('success', function(response_topic) {
-            var topicArn = response_topic.data.TopicArn;
-            log("SNS Response Topic: " + topicArn);
+            var topic_arn = response_topic.data.TopicArn;
+            log("SNS Response Topic: " + topic_arn);
             // TAKE S3 LIST OBJECTS
             // Could have multiple S3 objects ( each representing single start )
             if (response_list.data.Contents.length == 0) {
               done(null, []);
+              return;
             }
             let promise;
             let promise_batch_list = [];
             for (var index = 0; index < response_list.data.Contents.length; index++) {
-              promise = process_s3_create_job_batch(user_name, topicArn, session_id, s3_bucket_name, response_list.data.Contents[index].Key);
+              promise = process_s3_create_job_batch(user_name, topic_arn, session_id, s3_bucket_name, response_list.data.Contents[index].Key);
               promise_batch_list.push(promise);
             }
             Promise.all(promise_batch_list)
               .then(function() {
                 log("== Finished");
-                var promise_f = finalize_session_event_start(topicArn, session_id, user_name, callback);
+                let promise_f = finalize_session_event_start(topic_arn, session_id, user_name, callback);
                 promise_f
                   .then(function() {
+                    log(`== Finished success(${id_list.length}): ${id_list}`);
                     done(null, id_list);
-                  })
-                  .catch(function(error) {
-                    log("finalize error");
-                    log(error, error.stack); // an error occurred
-                    done(new Error(`"${error.stack}"`));
-                });
+                  });
                 return promise_f;
               })
               .catch(function(error) {
+                log("== Finished error");
                 log(error, error.stack); // an error occurred
                 done(new Error(`"${error.stack}"`));
               });
