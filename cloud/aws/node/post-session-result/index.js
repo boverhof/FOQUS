@@ -68,7 +68,7 @@ exports.handler = function(event, context, callback) {
             var page_ms = 0;
             var job_id = "";
             const job_paged_set = new Set();
-            log("getS3Objects: " + JSON.stringify(response));
+            //log("getS3Objects: " + JSON.stringify(response));
 
             if (response.IsTruncated) {
                 //params.ContinuationToken = response.NextContinuationToken;
