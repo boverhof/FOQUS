@@ -17,15 +17,18 @@
 
 John Eslick, Carnegie Mellon University, 2014
 """
+import math
+import types
+
 from PyQt5 import QtCore
 from PyQt5.QtGui import (
+    QBrush,
     QColor,
     QFont,
-    QPen,
-    QBrush,
     QPainter,
     QPainterPath,
     QPainterPathStroker,
+    QPen,
 )
 from PyQt5.QtWidgets import (
     QGraphicsScene,
@@ -34,9 +37,8 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QMessageBox,
 )
+
 from foqus_lib.framework.graph import *
-import math
-import types
 
 
 class fsScene(QGraphicsScene):
@@ -274,7 +276,7 @@ class fsScene(QGraphicsScene):
         --Args--
         index: the edge index
         curve: distance from center of straight edge to a point on
-               curved edge (can be positive or negitive.  Used to
+               curved edge (can be positive or negative.  Used to
                keep edges from overlapping.
         tear: if true draw in tear edge style
         """
@@ -314,7 +316,7 @@ class fsScene(QGraphicsScene):
                 gi = self.addPath(path, self.tearEdgePen)
             else:
                 gi = self.addPath(path, self.edgePen)
-            # Add data to edge so if seleted we can determine that it
+            # Add data to edge so if selected we can determine that it
             # is an edge and which edge it is.
             gi.setData(1, index)
             gi.setData(2, "edge")
@@ -412,7 +414,7 @@ class fsScene(QGraphicsScene):
             itemType = None
             itemIndex = None
         # Selection Mode select nodes or edges holding shift allows
-        # you to select multiple nodels and edges.
+        # you to select multiple nodes and edges.
         if self.mode == self.MODE_SELECT:
             if mod != QtCore.Qt.SHIFT:
                 self.selectedEdges = []
@@ -488,7 +490,7 @@ class fsScene(QGraphicsScene):
 class drawFlowsheet(QGraphicsView):
     """
     This is the widget for viewing a flowsheet the actual drawing
-    and event handing is done by the fsSecne object contained in
+    and event handing is done by the fsScene object contained in
     drawFlowsheet object
     """
 

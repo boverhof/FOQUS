@@ -12,16 +12,18 @@
 # respectively. This file is also available online at the URL
 # "https://github.com/CCSI-Toolset/FOQUS".
 #################################################################################
-import numpy
-from foqus_lib.framework.graph.nodeVars import *
 from collections import OrderedDict
+
+import numpy
+
+from foqus_lib.framework.graph.nodeVars import *
 
 
 class pymodel:
     def __init__(self):
         self.inputs = OrderedDict()
         self.outputs = OrderedDict()
-        self.status = -1  # Caclulation status code
+        self.status = -1  # Calculation status code
         self.description = "A Python model plugin"
         self.node = None
 

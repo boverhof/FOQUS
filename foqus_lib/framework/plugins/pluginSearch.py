@@ -15,20 +15,20 @@
 """ pluginSearch.py
 
 * This class looks for plugins and creates a dictionary containing.
-  the plugin models.  Plugin objects can be instanciated elsewhere.
+  the plugin models.  Plugin objects can be instantiated elsewhere.
   The plugins are identified by a certain string contained in the
-  first x charcters of the python file.  Plugins should have a .py
+  first x characters of the python file.  Plugins should have a .py
   extension.
 
 John Eslick, Carnegie Mellon University, 2014
 """
 
-import sys
-import os
+import imp
 import importlib
 import logging
-import imp
+import os
 import re
+import sys
 import traceback
 
 _log = logging.getLogger("foqus." + __name__)

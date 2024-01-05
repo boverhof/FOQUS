@@ -16,8 +16,9 @@
 # FOQUS_PYMODEL_PLUGIN
 
 import numpy
-from foqus_lib.framework.pymodel.pymodel import *
+
 from foqus_lib.framework.graph.nodeVars import *
+from foqus_lib.framework.pymodel.pymodel import *
 
 
 def checkAvailable():
@@ -53,7 +54,7 @@ class pymodel_pg(pymodel):
             tags=[],
             dtype=float,
         )  # if dtype is not specified the type is taken
-        # from the default vaule.
+        # from the default value.
         self.inputs["Net.Efficiency"] = NodeVars(
             value=42.06,
             vmin=0.0,
