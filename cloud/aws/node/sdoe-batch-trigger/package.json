@@ -4,7 +4,10 @@
   "description": "S3 Trigger",
   "main": "index.js",
   "dependencies": {
-    "aws-sdk": ""
+    "aws-sdk": "",
+    "path": "",
+    "uuid": "",
+    "uuid-validate": ""
   },
   "scripts": {
     "setup": "./node_modules/.bin/node-lambda setup",
