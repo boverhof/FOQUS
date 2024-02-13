@@ -14,13 +14,14 @@
 #################################################################################
 import time
 from operator import gt, lt
-
+import itertools
 import numpy as np
 
 from .distance import compute_dist
 
 
 def compute_min_dist(mat, scl, hist_xs=None):
+    print('START:  %s, %s' %(mat, scl))
     dmat = compute_dist(mat, scl=scl, hist_xs=hist_xs)
     min_dist = np.min(dmat, axis=0)
     return dmat, min_dist
@@ -67,11 +68,14 @@ def criterion(
     for i in range(nr):
 
         print("Random start {}".format(i))
-
+        print("cand.index %s" %(cand.index))
+        print("nd %s" %(nd))
         # sample without replacement <nd> indices
         rand_index = np.random.choice(cand.index, nd, replace=False)
         # extract the <nd> rows
         rand_cand = cand.loc[rand_index]
+        print("rand_cand: %s" %(rand_cand))
+        print("---")
         # extract the relevant columns (of type 'Input' only) for dist computations
         dmat, min_dist = compute_min_dist(rand_cand[idx].values, scl, hist_xs=hist_xs)
         dist = fcn(min_dist)
@@ -79,6 +83,83 @@ def criterion(
         if cond(dist, best_val):
             best_cand = rand_cand
             best_index = rand_index  # for debugging
+            best_val = dist  # for debugging
+            best_dmat = dmat  # used for ranking candidates
+
+        elapsed_time = time.time() - t0
+    # best_cand.insert(loc=0, column=id_, value=best_cand.index)
+
+    results = {
+        "best_cand": best_cand,
+        "best_index": best_index,
+        "best_val": best_val,
+        "best_dmat": best_dmat,
+        "dmat_cols": idx,
+        "mode": mode,
+        "design_size": nd,
+        "num_restarts": nr,
+        "elapsed_time": elapsed_time,
+    }
+
+    return results
+
+
+def criterion_all(
+    cand,  # candidates
+    args,  # scaling factors for included columns
+    nd,  # design size <= len(candidates)
+    mode="maximin",
+    hist=None,
+):
+
+    mode = mode.lower()
+    assert mode in ["maximin", "minimax"], "MODE {} not recognized.".format(mode)
+    if mode == "maximin":
+        best_val = -1
+        fcn = np.mean
+        cond = gt
+    elif mode == "minimax":
+        best_val = 99999
+        fcn = np.max
+        cond = lt
+
+    # indices of type ...
+    _id_ = args["icol"]  # Index
+    idx = args["xcols"]  # Input
+
+    # scaling factors
+    scl = args["scale_factors"]
+    scl = scl[idx].values
+
+    # history, if provided
+    if hist is not None:
+        hist_xs = hist[idx].values
+    else:
+        hist_xs = None
+
+    best_cand = []
+    _best_rand_sample = []
+
+    t0 = time.time()
+    nr = 0
+
+    #for indexer in itertools.permutations(cand.values.tolist(), r=nd):
+    for indexer in itertools.permutations(list(range(cand.index.stop)), r=2):
+        nr += 1
+        # sample without replacement <nd> indices
+        #rand_index = np.random.choice(cand.index, nd, replace=False)
+        # extract the <nd> rows
+        next_index = list(indexer)
+        next_cand = cand.loc[next_index]
+        print("permutations {}".format(next_index))
+        print("next_cand: {}".format(next_cand))
+        # extract the relevant columns (of type 'Input' only) for dist computations
+        dmat, min_dist = compute_min_dist(next_cand[idx].values, scl, hist_xs=hist_xs)
+        dist = fcn(min_dist)
+
+        if cond(dist, best_val):
+            best_cand = next_cand
+            best_index = next_index  # for debugging
             best_val = dist  # for debugging
             best_dmat = dmat  # used for ranking candidates
 

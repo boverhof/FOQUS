@@ -13,24 +13,22 @@ CONSUMER_ID = "00000000-0000-0000-0000-000000000000"
 def lambda_handler(event, context):
     #print("EVENT: %s" % (json.dumps(event)))
     sns = boto3.client("sns")
-    update_topic_arn = os.environ["FOQUS_Update_Topic_Arn"]
+    update_topic_arn = os.environ["SDOE_BATCH_TOPIC_ARN"]
     print("SDOE compute_min_dist: TOPIC_ARN=%s" % (update_topic_arn))
     num_executions = 0
     assert "Records" in event, "Format Error: No Records in SNS Message"
     print("Number Records: %d" % (event["Records"].length))
     for record in event["Records"]:
-        msg_id = record["messageId"]
+        if "Sns" not in record:
+            print("Ignore non-Sns record")
+            continue
+        assert "MessageId" in record, "Format Error: missing MessageId in Sns Record"
+        msg_id = record["MessageId"]
         print("Start Record=%d, messageId=%s" % (num_executions,msg_id))
         body = record["body"]
         job = json.loads(body)
-        if job["resource"] != "job":
-            print("ERROR Misconfigured -- IGNORE Resource: %s" % (job))
-            continue
-        if job["event"] != "status" or job["status"] != "submit":
-            print("ERROR Misconfigured -- IGNORE JOB: %s" % (job))
-            continue
 
-        application = record["messageAttributes"]["application"]["stringValue"]
+        application = record["MessageAttributes"]["application"]["stringValue"]
         job_id = record["messageAttributes"]["job"]["stringValue"]
         session_id = record["messageAttributes"]["session"]["stringValue"]
         username = record["messageAttributes"]["username"]["stringValue"]
@@ -43,13 +41,7 @@ def lambda_handler(event, context):
         msg_attrs["job"] = dict(StringValue=job_id, DataType="String")
         msg_attrs["session"] = dict(StringValue=session_id, DataType="String")
         msg_attrs["username"] = dict(StringValue=username, DataType="String")
-        """
-        "body": "{\"Initialize\":false,\"Input\":{},\"Reset\":false,\"Application\":\"sdoe.usf.compute_min_dist\",
-        \"Simulation\":\"sdoe.usf.compute_min_dist\",\"Visible\":false,\"Id\":\"be84bcdb-a682-4d97-805b-e5e4748df7ce\",
-        \"resource\":\"job\",\"status\":\"submit\",\"jobid\":\"be84bcdb-a682-4d97-805b-e5e4748df7ce\",
-        \"sessionid\":\"e59589d3-4e77-48e3-b946-c2abac8d8e0e\",
-        \"event\":\"status\"}",
-        """
+
         job2 = copy.deepcopy(job)
         job2["consumer"] = CONSUMER_ID
         job2["instanceid"] = "lambda"
@@ -134,19 +126,3 @@ def lambda_handler(event, context):
 
     print("Finished: SDOE Executions %d" % (num_executions))
     return {"statusCode": 200, "body": "SDOE Executions %d" % (num_executions)}
-
-
-def test_handler(event, context):
-    # SLM Security Group us-east-1 sg-097636e72d37d985f
-    # ec2 = boto3.client('ec2', region_name='us-east-1')
-    s3 = boto3.client("s3")
-    sqs = boto3.client("sqs")
-    try:
-        print("START")
-        rsp = s3.list_buckets()
-        buckets = map(lambda i: i["Name"], rsp["Buckets"])
-        print("RESPONSE: %s", str(list(buckets)))
-    except ClientError as e:
-        print(e)
-        return {"statusCode": 200, "body": json.dumps("Hello from Lambda!")}
-    return {"statusCode": 200, "body": json.dumps("Hello from Lambda!")}

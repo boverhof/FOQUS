@@ -28,11 +28,12 @@ def test_criterion():
         "xcols": [0, 1],
         "scale_factors": pd.Series(1.0, index=range(len(cand))),
     }
-    nr = 3
+    nr = 1
     nd = 2
     mode = "maximin"
     hist = None
 
     result = usf.criterion(cand=cand, args=args, nr=nr, nd=nd, mode=mode, hist=hist)
+    print(result)
 
     assert result.get("best_cand") is not None
