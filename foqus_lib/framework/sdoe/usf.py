@@ -16,12 +16,11 @@ import time
 from operator import gt, lt
 import itertools
 import numpy as np
-
+import pandas as pd
 from .distance import compute_dist
 
 
 def compute_min_dist(mat, scl, hist_xs=None):
-    print('START:  %s, %s' %(mat, scl))
     dmat = compute_dist(mat, scl=scl, hist_xs=hist_xs)
     min_dist = np.min(dmat, axis=0)
     return dmat, min_dist

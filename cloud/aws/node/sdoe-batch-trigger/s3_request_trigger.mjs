@@ -35,9 +35,9 @@ export const handler = async (event, context) => {
     //const batch_id = key.split('/')[5].strip('.json');
     const keypath = path.parse(key);
     const username = keypath.dir.split('/')[1];
-    const batch_id = keypath.name;
-    // if ( !validate(batch_id)) {
-    //   throw new Error(`s3 batch request (${bucket}:${key}) bad batch UUID id=${batch_id}`);
+    const request_id = keypath.name;
+    // if ( !validate(request_id)) {
+    //   throw new Error(`s3 batch request (${bucket}:${key}) bad batch UUID id=${request_id}`);
     // }
     console.log(`sdoe_batch_topic_arn: ${sdoe_batch_topic_arn}`);
 
@@ -55,20 +55,70 @@ export const handler = async (event, context) => {
         throw new Error(message);
     }
     console.log(`Keys: ${Object.keys(obj)}`);
-    console.log(`Length: ${obj.input.length}`);
-    console.log(`ID: ${obj.id}`);
     //"application":"sdoe.usf.compute_min_dist",
     //"id":"2febbd12-f343-4c5b-981e-bef849690040",
     if ( !obj.application.startsWith('sdoe.')) {
       throw new Error(`s3 batch request (${bucket}:${key}) bad attribute application=${obj.application}`);
     }
-    for (var idx = 0; idx < obj.input.length; idx++) {
-      let input = obj.input[idx];
-      console.log(`SNS Publish: ${idx}`);
+
+    if (obj.application == "sdoe.usf.compute_min_dist") {
+      console.log(`Length: ${obj.input.length}`);
+      console.log(`ID: ${obj.id}`);
+      for (var idx = 0; idx < obj.input.length; idx++) {
+        let input = obj.input[idx];
+        console.log(`SNS Publish: ${idx}`);
+        var response = await sns_client.send(
+          new PublishCommand({
+            TopicArn: sdoe_batch_topic_arn,
+            Message: JSON.stringify(input),
+            MessageAttributes: {
+              'request-s3key': {
+                DataType: 'String',
+                StringValue: key
+              },
+              'request-s3bucket': {
+                DataType: 'String',
+                StringValue: bucket
+              },
+              'response-s3bucket': {
+                DataType: 'String',
+                StringValue: sdoe_batch_response_bucket
+              },
+              'batch-id': {
+                DataType: 'String',
+                StringValue: request_id
+              },
+              'batch-index': {
+                DataType: 'String',
+                StringValue: idx.toString()
+              },
+              'batch-length': {
+                DataType: 'String',
+                StringValue: obj.input.length.toString()
+              },
+              'username': {
+                DataType: 'String',
+                StringValue: username
+              },
+              'event': {
+                DataType: 'String',
+                StringValue: 'submit'
+              },
+              'application': {
+                DataType: 'String',
+                StringValue: obj.application
+              }
+            }
+          }),
+        );
+      }
+    }
+    else if (obj.application == "sdoe.usf.criterion") {
+      console.log(`SNS Publish SDOE USF Criterion: ${obj.application}`);
       var response = await sns_client.send(
         new PublishCommand({
           TopicArn: sdoe_batch_topic_arn,
-          Message: JSON.stringify(input),
+          Message: JSON.stringify(obj),
           MessageAttributes: {
             'request-s3key': {
               DataType: 'String',
@@ -82,13 +132,13 @@ export const handler = async (event, context) => {
               DataType: 'String',
               StringValue: sdoe_batch_response_bucket
             },
-            'batch-id': {
+            'criterion-id': {
               DataType: 'String',
-              StringValue: batch_id
+              StringValue: request_id
             },
-            'batch-index': {
+            'candidates-length': {
               DataType: 'String',
-              StringValue: idx.toString()
+              StringValue: obj.candidates.length.toString()
             },
             'username': {
               DataType: 'String',
@@ -105,6 +155,10 @@ export const handler = async (event, context) => {
           }
         }),
       );
+    }
+    else {
+      console.log(`Ignoring application=${obj.application}`)
+      return 0;
     }
     return 1;
 };

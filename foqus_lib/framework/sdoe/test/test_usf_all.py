@@ -13,12 +13,20 @@
 # "https://github.com/CCSI-Toolset/FOQUS".
 #################################################################################
 from unittest import result
+<<<<<<< HEAD
 
 import numpy as np
 import pandas as pd
 
 from foqus_lib.framework.sdoe import usf
 
+=======
+import os
+import numpy as np
+import pandas as pd
+from foqus_lib.framework.sdoe import sdoe, usf
+#from .df_utils import load, write
+>>>>>>> cf1e1f67b9d399c078d27470c935cb18b894cf19
 
 def test_criterion():
 
@@ -36,3 +44,16 @@ def test_criterion():
     print(result)
 
     assert result.get("best_cand") is not None
+<<<<<<< HEAD
+=======
+
+def test_run_usf():
+
+    config_file = "config_usf.ini"
+    nd = 2
+    # copy_from_package("candidates_usf.csv")
+    # copy_from_package(config_file)
+
+    result = sdoe.run(config_file=config_file, nd=nd, test=False)
+    print(result)
+>>>>>>> cf1e1f67b9d399c078d27470c935cb18b894cf19
