@@ -42,7 +42,7 @@ console.log('foqus-fake-job-runner loading submit');
 exports.handler = async (event) => {
     let promises = [];
     console.log(JSON.stringify(event));
-    for (const { messageId, body } of event.Records) {
+    for (const { messageId, messageAttributes, body } of event.Records) {
         console.log('SQS message %s: %j', messageId, body);
         var job = JSON.parse(body);
         console.log('job submit: %j', job);
@@ -79,7 +79,7 @@ exports.handler = async (event) => {
             },
             'username': {
               DataType: 'String',
-              StringValue: "boverhof"
+              StringValue: messageAttributes.username.stringValue
             },
             'application': {
               DataType: 'String',
